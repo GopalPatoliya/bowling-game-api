@@ -7,4 +7,11 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   # root "posts#index"
+  namespace :api do
+    namespace :v1 do
+      post '/start', to: 'bowling_game#start'
+      post '/roll', to: 'bowling_game#roll'
+      get '/score', to: 'bowling_game#score'
+    end
+  end
 end
