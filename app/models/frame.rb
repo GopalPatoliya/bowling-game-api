@@ -1,28 +1,19 @@
 class Frame < ApplicationRecord
   belongs_to :game
-  has_many :rolls
-
-  validate :rolls_limit
-  validate :rolls_sum
-  validate :game_frames_limit
+  has_many :rolls, dependent: :destroy
 
   MAX_PINS = 10
   MAX_FRAMES = 10
 
-  def rolls_limit
-    errors.add(:base, "Frame can have maximum three rolls") if rolls.size > 2 && !game.frames.last.strike? && !game.frames.last.strike?
-  end
+  # Validates the maximum number of frames per game
+  validate :game_frames_limit
 
-  def rolls_sum
-    total_score = rolls.sum(:score)
-    errors.add(:base, "Total score of rolls cannot exceed 10") if total_score > 10
-  end
-
+  # Checks if the maximum number of frames for the game has been reached
   def game_frames_limit
-    errors.add(:base, "Game can have maximum 10 frames") if game.frames.size >= 10
+    errors.add(:base, "Game can have maximum #{MAX_FRAMES} frames") if game.frames.size >= MAX_FRAMES
   end
 
-
+  # Checks if the frame is complete based on its rolls
   def complete?
     return false if frame_number == MAX_FRAMES && rolls.size < 3 && (strike? || spare?)
     return true if frame_number == MAX_FRAMES && rolls.size == 3 && (strike? || spare?)
@@ -31,14 +22,17 @@ class Frame < ApplicationRecord
     false
   end
 
+  # Checks if the frame is a strike
   def strike?
     rolls.first.pins_knocked_down == MAX_PINS rescue false
   end
 
+  # Checks if the frame is a spare
   def spare?
     rolls.size == 2 && rolls.sum(:pins_knocked_down) == MAX_PINS rescue false
   end
 
+  # Calculates the score for the frame
   def score
     if frame_number == MAX_FRAMES
       score = rolls.sum(:pins_knocked_down)
@@ -50,7 +44,6 @@ class Frame < ApplicationRecord
       else
         score = 10+ self.next.rolls.sum(:pins_knocked_down)
       end
-
     elsif spare?
       score = self.next.rolls.first.pins_knocked_down + 10
     else
@@ -59,7 +52,8 @@ class Frame < ApplicationRecord
     score
   end
 
+  # Retrieves the next frame
   def next
-    Frame.find_by(frame_number: self.frame_number + 1)
+    game.frames.find_by(frame_number: self.frame_number + 1)
   end
 end
